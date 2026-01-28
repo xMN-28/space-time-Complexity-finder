@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Complexity Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        dark: {
+                            50: '#f7f7f8',
+                            100: '#ececf1',
+                            200: '#d9d9e3',
+                            300: '#c5c5d2',
+                            400: '#acacbe',
+                            500: '#8e8ea0',
+                            600: '#565869',
+                            700: '#40414f',
+                            800: '#343541',
+                            900: '#202123',
+                            950: '#0d0d0f',
+                        }
+                    },
+                    animation: {
+                        'gradient': 'gradient 8s linear infinite',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        gradient: {
+                            '0%, 100%': { backgroundPosition: '0% 50%' },
+                            '50%': { backgroundPosition: '100% 50%' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0d0d0f 0%, #1a1a2e 50%, #0d0d0f 100%);
+            min-height: 100vh;
+        }
+        
+        .glass {
+            background: rgba(52, 53, 65, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .gradient-border {
+            position: relative;
+            background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+            padding: 2px;
+            border-radius: 1rem;
+        }
+        
+        .gradient-border-inner {
+            background: #202123;
+            border-radius: calc(1rem - 2px);
+        }
+        
+        .code-editor {
+            background: #1e1e2e;
+            color: #cdd6f4;
+        }
+        
+        .code-editor:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.5);
+        }
+        
+        .glow {
+            box-shadow: 0 0 60px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-glow:hover {
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #202123;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #565869;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8e8ea0;
+        }
+        
+        /* Loading animation */
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 3px solid transparent;
+            border-top-color: #667eea;
+            border-right-color: #764ba2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Floating orbs */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: #667eea;
+            top: -100px;
+            left: -100px;
+            animation: float 8s ease-in-out infinite;
+        }
+        
+        .orb-2 {
+            width: 300px;
+            height: 300px;
+            background: #f093fb;
+            bottom: -50px;
+            right: -50px;
+            animation: float 10s ease-in-out infinite reverse;
+        }
+        
+        .result-card {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .result-card.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="font-sans text-dark-100 overflow-x-hidden">
+    <!-- Background orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    
+    <div class="relative z-10 min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-5xl mx-auto">
+            <!-- Header -->
+            <header class="text-center mb-12">
+                <div class="inline-flex items-center justify-center mb-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center">
+                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                </div>
+                <h1 class="text-4xl sm:text-5xl font-bold gradient-text mb-4">
+                    Code Complexity Analyzer
+                </h1>
+                <p class="text-dark-400 text-lg max-w-2xl mx-auto">
+                    Paste your code below and let AI analyze its time and space complexity with detailed explanations
+                </p>
+            </header>
+            
+            <!-- Main content -->
+            <main>
+                <!-- Code input section -->
+                <div class="glass rounded-2xl p-6 sm:p-8 mb-8 glow">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="flex gap-2">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            </div>
+                            <span class="text-dark-400 text-sm font-medium">Your Code</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-3">
+                            <label class="text-dark-400 text-sm">Language:</label>
+                            <select id="language" class="bg-dark-800 text-dark-200 text-sm rounded-lg px-3 py-2 border border-dark-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all">
+                                <option value="auto">Auto Detect</option>
+                                <option value="python">Python</option>
+                                <option value="javascript">JavaScript</option>
+                                <option value="java">Java</option>
+                                <option value="cpp">C++</option>
+                                <option value="c">C</option>
+                                <option value="csharp">C#</option>
+                                <option value="go">Go</option>
+                                <option value="rust">Rust</option>
+                                <option value="typescript">TypeScript</option>
+                                <option value="ruby">Ruby</option>
+                                <option value="php">PHP</option>
+                                <option value="swift">Swift</option>
+                                <option value="kotlin">Kotlin</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <textarea
+                        id="code-input"
+                        class="code-editor w-full h-80 rounded-xl p-4 font-mono text-sm resize-none transition-all"
+                        placeholder="// Paste your code here...
+
+function example(arr) {
+    for (let i = 0; i < arr.length; i++) {
+        for (let j = 0; j < arr.length; j++) {
+            console.log(arr[i], arr[j]);
+        }
+    }
+}"
+                        spellcheck="false"
+                    ></textarea>
+                    
+                    <div class="flex items-center justify-between mt-6">
+                        <span id="char-count" class="text-dark-500 text-sm">0 / 10,000 characters</span>
+                        
+                        <button
+                            id="analyze-btn"
+                            class="btn-glow relative inline-flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                            <span>Analyze Complexity</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Loading state -->
+                <div id="loading" class="hidden">
+                    <div class="glass rounded-2xl p-12 text-center">
+                        <div class="loader mx-auto mb-4"></div>
+                        <p class="text-dark-300 text-lg">Analyzing your code...</p>
+                        <p class="text-dark-500 text-sm mt-2">This may take a few seconds</p>
+                    </div>
+                </div>
+                
+                <!-- Error state -->
+                <div id="error" class="hidden">
+                    <div class="bg-red-500/10 border border-red-500/30 rounded-2xl p-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-red-400 font-semibold text-lg">Analysis Failed</h3>
+                                <p id="error-message" class="text-red-300/80 mt-1"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Results section -->
+                <div id="results" class="hidden space-y-6">
+                    <!-- Summary card -->
+                    <div class="result-card glass rounded-2xl p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <h2 class="text-xl font-semibold text-dark-100">Summary</h2>
+                        </div>
+                        <p id="result-summary" class="text-dark-300 leading-relaxed"></p>
+                    </div>
+                    
+                    <!-- Complexity cards -->
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <!-- Time complexity -->
+                        <div class="result-card glass rounded-2xl p-6" style="transition-delay: 0.1s;">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </div>
+                                <h2 class="text-xl font-semibold text-dark-100">Time Complexity</h2>
+                            </div>
+                            
+                            <div class="gradient-border mb-4">
+                                <div class="gradient-border-inner px-4 py-3">
+                                    <span id="time-notation" class="text-2xl font-bold font-mono gradient-text"></span>
+                                </div>
+                            </div>
+                            
+                            <p id="time-explanation" class="text-dark-400 text-sm leading-relaxed"></p>
+                        </div>
+                        
+                        <!-- Space complexity -->
+                        <div class="result-card glass rounded-2xl p-6" style="transition-delay: 0.2s;">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+                                    </svg>
+                                </div>
+                                <h2 class="text-xl font-semibold text-dark-100">Space Complexity</h2>
+                            </div>
+                            
+                            <div class="gradient-border mb-4">
+                                <div class="gradient-border-inner px-4 py-3">
+                                    <span id="space-notation" class="text-2xl font-bold font-mono gradient-text"></span>
+                                </div>
+                            </div>
+                            
+                            <p id="space-explanation" class="text-dark-400 text-sm leading-relaxed"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Suggestions card -->
+                    <div id="suggestions-card" class="result-card glass rounded-2xl p-6 hidden" style="transition-delay: 0.3s;">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                </svg>
+                            </div>
+                            <h2 class="text-xl font-semibold text-dark-100">Optimization Suggestions</h2>
+                        </div>
+                        <p id="result-suggestions" class="text-dark-300 leading-relaxed"></p>
+                    </div>
+                </div>
+            </main>
+            
+            <!-- Footer -->
+            <footer class="text-center mt-12 text-dark-500 text-sm">
+                <p>Powered by OpenAI GPT</p>
+            </footer>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
