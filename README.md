@@ -14,6 +14,8 @@ A beautiful web application that analyzes the time and space complexity of your 
 - **Optimization Suggestions**: Get tips on how to improve your code
 - **Modern UI**: Beautiful dark theme with smooth animations
 
+![image alt](https://github.com/xMN-28/space-time-Complexity-finder/blob/5c912ffa079eadbee1fe92f1e444311e409beeec/code-complexity-ss.jpeg)
+
 ## Quick Start
 
 ### 1. Install Dependencies
